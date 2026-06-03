@@ -123,6 +123,14 @@ service est disponible. Pour l'arrêter : `Ctrl + C`.
 > L'adresse `http://127.0.0.1:8787/mcp` n'est accessible que depuis **ta propre
 > machine** (c'est voulu, pour la sécurité).
 
+> 🔢 **Connaître ta version** (utile pour signaler un problème ou vérifier une
+> mise à jour) :
+> ```powershell
+> .venv\Scripts\python -m claude_wrapper --version
+> ```
+> La version s'affiche aussi au démarrage (dans la bannière). L'historique des
+> changements est dans [`CHANGELOG.md`](../CHANGELOG.md).
+
 ---
 
 ## 5. Vérifier que ça marche

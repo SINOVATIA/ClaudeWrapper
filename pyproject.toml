@@ -1,6 +1,6 @@
 [project]
 name = "claude-wrapper"
-version = "0.1.0"
+dynamic = ["version"]
 description = "MCP server that wraps the Claude Code CLI and exposes it as a callable service."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -22,6 +22,10 @@ claude-wrapper = "claude_wrapper.__main__:main"
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+# Single source of truth for the version: src/claude_wrapper/__init__.py.
+[tool.hatch.version]
+path = "src/claude_wrapper/__init__.py"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/claude_wrapper"]

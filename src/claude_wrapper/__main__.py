@@ -6,12 +6,15 @@ from __future__ import annotations
 import argparse
 import sys
 
+from . import __version__
 from .config import load_config
 from .server import build_server, run_http
 
 
 def _parse_args(argv: list[str]) -> argparse.Namespace:
     p = argparse.ArgumentParser(prog="claude-wrapper", description=__doc__)
+    p.add_argument("--version", action="version",
+                   version=f"claude-wrapper {__version__}")
     p.add_argument("--config", help="Path to a TOML config file.")
     p.add_argument("--host", help="Bind host (default 127.0.0.1).")
     p.add_argument("--port", type=int, help="Bind port (default 8787).")
@@ -35,7 +38,7 @@ def main(argv: list[str] | None = None) -> int:
     cfg = load_config(overrides, config_path=args.config)
 
     banner = (
-        f"claude-wrapper on http://{cfg.host}:{cfg.port}/mcp  "
+        f"claude-wrapper {__version__} on http://{cfg.host}:{cfg.port}/mcp  "
         f"(model={cfg.model or 'cli-default'}, permission_mode={cfg.permission_mode}, "
         f"root={cfg.root or 'any'}, dangerous={'ON' if cfg.dangerous else 'off'}, "
         f"auth={'token' if cfg.token else 'none'})"

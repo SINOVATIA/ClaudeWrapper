@@ -31,6 +31,15 @@ python -m venv .venv
 
 The server listens on `http://127.0.0.1:8787/mcp` by default.
 
+Check the installed version any time:
+
+```bash
+.venv\Scripts\python -m claude_wrapper --version   # -> claude-wrapper 0.2.0
+```
+
+The version also appears in the startup banner and in the `claude_health` tool
+(`wrapper_version`). See [`CHANGELOG.md`](CHANGELOG.md) for what changed.
+
 ## Build a standalone binary (optional)
 
 A one-file executable (no Python needed on the target, but still requires Node +
