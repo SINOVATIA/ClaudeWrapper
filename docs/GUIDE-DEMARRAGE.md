@@ -78,10 +78,10 @@ python --version
 
 Choisis **A** ou **B**.
 
-**A. Avec Git** (si on t'a donné une adresse de dépôt) :
+**A. Avec Git** (recommandé) :
 ```powershell
 cd C:\DATA\DEVELOPPEMENT
-git clone <ADRESSE-DU-DEPOT> Wrapper-Claude
+git clone https://github.com/SINOVATIA/ClaudeWrapper.git Wrapper-Claude
 cd Wrapper-Claude
 ```
 
@@ -179,7 +179,9 @@ Contenu :
 ```
 
 ### b) Créer l'agent « boîte aux lettres » — `claude.md`
-Copie `examples/opencode/agent/claude.md` dans le dossier des agents d'opencode :
+Copie `examples/opencode/agent/claude-agent.md` dans le dossier des agents
+d'opencode **en le renommant `claude.md`** (le nom du fichier devient le nom de
+l'agent) :
 - **Global** : `C:\Users\<TON-NOM>\.config\opencode\agent\claude.md`
 - **Projet** : `.opencode\agent\claude.md`
 

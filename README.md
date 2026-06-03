@@ -88,10 +88,11 @@ you chat with Claude through the wrapper. Ready-to-copy files live in
 1. Copy [`examples/opencode/opencode.json`](examples/opencode/opencode.json) to
    your opencode config (project root, or `~/.config/opencode/opencode.json`) —
    it registers the wrapper as a remote MCP server.
-2. Copy [`examples/opencode/agent/claude.md`](examples/opencode/agent/claude.md)
-   to `~/.config/opencode/agent/claude.md` (or `.opencode/agent/claude.md`) — a
-   "mailbox" agent that forwards every message to `claude_chat` verbatim. Edit
-   the default working dir inside it.
+2. Copy [`examples/opencode/agent/claude-agent.md`](examples/opencode/agent/claude-agent.md)
+   to `~/.config/opencode/agent/claude.md` (or `.opencode/agent/claude.md`) —
+   **save it as `claude.md`** (the filename becomes the opencode agent name). It
+   is a "mailbox" agent that forwards every message to `claude_chat` verbatim;
+   edit the default working dir inside it.
 3. In opencode, press **Tab** to select the `claude` agent and just talk. Use
    `cd <path>` to switch the working dir mid-chat (each dir keeps its own memory).
 
