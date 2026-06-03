@@ -1,11 +1,13 @@
 # Claude Wrapper
 
+
+## POUR LES DEBUTANTS : suivre ce guide pas à pas :
+> 🟢 **Débutant ?** Suis le **[Guide de démarrage pas à pas](docs/GUIDE-DEMARRAGE.md)**
+> (français) : installation complète + utilisation depuis opencode, expliqué de zéro.
+
 An MCP server that wraps the **Claude Code CLI** (`claude -p`) and exposes it as
 a callable service over Streamable HTTP, so any application on the local machine
 can send a prompt and receive Claude's text response.
-
-> 🟢 **Débutant ?** Suis le **[Guide de démarrage pas à pas](docs/GUIDE-DEMARRAGE.md)**
-> (français) : installation complète + utilisation depuis opencode, expliqué de zéro.
 
 See [`claude_wrapper_specification.md`](claude_wrapper_specification.md) for the
 full design.
