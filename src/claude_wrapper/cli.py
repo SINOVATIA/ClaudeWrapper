@@ -32,6 +32,7 @@ class PromptOptions:
     session_id: str | None = None      # resume an existing session
     new_session_id: str | None = None  # mint a specific id for a new session
     max_budget_usd: float | None = None
+    json_schema: dict | None = None    # JSON Schema for structured output
 
 
 @dataclass
@@ -41,6 +42,7 @@ class PromptResult:
     is_error: bool
     cost_usd: float | None = None
     duration_ms: int | None = None
+    structured: dict | None = None     # parsed structured_output (when json_schema used)
 
 
 def build_command(cfg: Config, opts: PromptOptions, *, stream: bool = False) -> list[str]:
@@ -78,6 +80,8 @@ def build_command(cfg: Config, opts: PromptOptions, *, stream: bool = False) -> 
         cmd += ["--append-system-prompt", opts.system_prompt_append]
     if opts.max_budget_usd is not None:
         cmd += ["--max-budget-usd", str(opts.max_budget_usd)]
+    if opts.json_schema is not None:
+        cmd += ["--json-schema", json.dumps(opts.json_schema)]
 
     # Sessions: resume takes precedence; otherwise pin a freshly-minted id.
     if opts.session_id:
@@ -133,6 +137,7 @@ async def run_prompt(cfg: Config, opts: PromptOptions) -> PromptResult:
         is_error=bool(data.get("is_error", False)),
         cost_usd=data.get("total_cost_usd"),
         duration_ms=data.get("duration_ms"),
+        structured=data.get("structured_output"),
     )
 
 
@@ -175,6 +180,7 @@ async def run_prompt_stream(
         is_error = False
         cost: float | None = None
         duration: int | None = None
+        structured: dict | None = None
         got_result = False
 
         async for raw in proc.stdout:
@@ -204,13 +210,18 @@ async def run_prompt_stream(
                 is_error = bool(evt.get("is_error", False))
                 cost = evt.get("total_cost_usd")
                 duration = evt.get("duration_ms")
+                structured = evt.get("structured_output")
                 session_id = evt.get("session_id") or session_id
 
         if not got_result:
             # Stream ended without a result event: fall back to accumulated text.
             text = "".join(acc)
             is_error = True
-        return PromptResult(text, session_id, is_error, cost, duration), got_result, ""
+        return (
+            PromptResult(text, session_id, is_error, cost, duration, structured),
+            got_result,
+            "",
+        )
 
     try:
         result, got_result, _ = await asyncio.wait_for(_consume(), timeout=cfg.timeout)

@@ -14,7 +14,7 @@ def _prep(cfg, reg, **kw):
     base = dict(
         prompt="hi", working_dir=None, model=None, permission_mode=None,
         allowed_tools=None, disallowed_tools=None, system_prompt_append=None,
-        session_id=None, max_budget_usd=None,
+        session_id=None, max_budget_usd=None, json_schema=None,
     )
     base.update(kw)
     return _prepare_options(cfg, reg, **base)
@@ -70,3 +70,10 @@ def test_default_mode_inherited_from_config(tmp_path):
     opts, _ = _prep(Config(permission_mode="acceptEdits"), SessionRegistry(2),
                     working_dir=str(tmp_path))
     assert opts.permission_mode == "acceptEdits"
+
+
+def test_json_schema_threaded_into_options(tmp_path):
+    schema = {"type": "object", "properties": {"x": {"type": "integer"}}}
+    opts, _ = _prep(Config(), SessionRegistry(2),
+                    working_dir=str(tmp_path), json_schema=schema)
+    assert opts.json_schema == schema

@@ -43,6 +43,7 @@ def _prepare_options(
     system_prompt_append: str | None,
     session_id: str | None,
     max_budget_usd: float | None,
+    json_schema: dict[str, Any] | None,
 ) -> tuple[PromptOptions, str]:
     """Validate inputs, enforce gates, and build PromptOptions + a slot key.
 
@@ -77,6 +78,7 @@ def _prepare_options(
         session_id=session_id,
         new_session_id=new_id,
         max_budget_usd=max_budget_usd,
+        json_schema=json_schema,
     )
     return opts, (session_id or new_id or wd)
 
@@ -113,6 +115,7 @@ def build_server(cfg: Config) -> FastMCP:
         system_prompt_append: str | None = None,
         session_id: str | None = None,
         max_budget_usd: float | None = None,
+        json_schema: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         """Run a prompt through Claude Code and return its text result.
 
@@ -120,6 +123,9 @@ def build_server(cfg: Config) -> FastMCP:
         pinned for the session's lifetime. Pass ``session_id`` to continue a
         prior conversation (the path must match). ``permission_mode`` =
         'bypassPermissions' requires the server to be started with --dangerous.
+        Pass ``json_schema`` (a JSON Schema object) to force structured output;
+        the parsed object is returned in the ``structured`` field (``text`` still
+        carries Claude's prose).
         """
         try:
             opts, slot_key = _prepare_options(
@@ -129,6 +135,7 @@ def build_server(cfg: Config) -> FastMCP:
                 disallowed_tools=disallowed_tools,
                 system_prompt_append=system_prompt_append,
                 session_id=session_id, max_budget_usd=max_budget_usd,
+                json_schema=json_schema,
             )
 
             slot = await registry.slot(slot_key)
@@ -144,6 +151,7 @@ def build_server(cfg: Config) -> FastMCP:
                 "is_error": result.is_error,
                 "cost_usd": result.cost_usd,
                 "duration_ms": result.duration_ms,
+                "structured": result.structured,
             }
         except WrapperError as exc:
             return {"text": "", "session_id": session_id, "is_error": True,
@@ -161,6 +169,7 @@ def build_server(cfg: Config) -> FastMCP:
         system_prompt_append: str | None = None,
         session_id: str | None = None,
         max_budget_usd: float | None = None,
+        json_schema: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         """Streaming variant of ``claude_prompt`` (spec §5.2).
 
@@ -168,7 +177,8 @@ def build_server(cfg: Config) -> FastMCP:
         is forwarded to the client as a progress notification (the delta in the
         notification's ``message`` field; ``progress`` is the cumulative
         character count). The return value carries the full aggregated text and
-        the same summary fields as ``claude_prompt``.
+        the same summary fields as ``claude_prompt`` (including ``structured``
+        when ``json_schema`` is supplied).
         """
         try:
             opts, slot_key = _prepare_options(
@@ -178,6 +188,7 @@ def build_server(cfg: Config) -> FastMCP:
                 disallowed_tools=disallowed_tools,
                 system_prompt_append=system_prompt_append,
                 session_id=session_id, max_budget_usd=max_budget_usd,
+                json_schema=json_schema,
             )
 
             sent = 0
@@ -200,6 +211,7 @@ def build_server(cfg: Config) -> FastMCP:
                 "is_error": result.is_error,
                 "cost_usd": result.cost_usd,
                 "duration_ms": result.duration_ms,
+                "structured": result.structured,
             }
         except WrapperError as exc:
             return {"text": "", "session_id": session_id, "is_error": True,

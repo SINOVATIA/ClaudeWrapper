@@ -411,12 +411,16 @@ Wrapper-Claude/
   (`--output-format stream-json --include-partial-messages`) drive it; the
   terminal `result` event yields the §5.1 summary. Clients opt in by passing a
   progress token; the full aggregated text is always in the return value (§5.2).
+- ~~Structured output~~ → **exposed** as an optional `json_schema` parameter on
+  `claude_prompt` / `claude_prompt_stream`. It maps to the CLI `--json-schema`
+  (inline JSON); the parsed `structured_output` is returned in a `structured`
+  field, leaving the prose `text` intact.
+- ~~Packaging target~~ → **both**: a PyInstaller one-file binary
+  (`build/claude-wrapper.spec`) *and* documented `pip install -e .` +
+  `python -m claude_wrapper` for development (§3.2, README).
 
 **Still open**
-1. **Structured output** — expose `--json-schema` as a tool parameter for
-   consumers that need typed results?
-3. **Packaging target** — ship PyInstaller binaries for both OSes, or document a
-   `pip install` + `python -m` run instead?
+- _(none — all decisions resolved)_
 
 ---
 

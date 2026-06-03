@@ -51,7 +51,9 @@ build\dist\claude-wrapper.exe --port 9000 --root C:\projects --token s3cret
 - `claude_health` — readiness probe; reports `cli_version`, `node_version`,
   `authenticated`, and `ready`.
 - `claude_prompt` — run a prompt; `working_dir` is required and pins the
-  session's sandbox.
+  session's sandbox. Optional `json_schema` (a JSON Schema object) forces
+  structured output — the parsed object is returned in the `structured` field
+  alongside the prose `text`.
 - `claude_prompt_stream` — same inputs/result as `claude_prompt`, but text
   deltas are streamed to the client as **progress notifications** (delta in the
   `message` field, cumulative char count in `progress`) while Claude generates.

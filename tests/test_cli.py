@@ -62,6 +62,18 @@ def test_resume_vs_new_session():
     assert fresh[fresh.index("--session-id") + 1] == "xyz"
 
 
+def test_json_schema_serialized_inline():
+    import json
+    schema = {"type": "object", "properties": {"ok": {"type": "boolean"}}, "required": ["ok"]}
+    cmd = build_command(Config(), _opts(json_schema=schema))
+    assert "--json-schema" in cmd
+    assert json.loads(cmd[cmd.index("--json-schema") + 1]) == schema
+
+
+def test_no_json_schema_emits_no_flag():
+    assert "--json-schema" not in build_command(Config(), _opts())
+
+
 def test_tools_budget_and_system_prompt():
     cmd = build_command(Config(), _opts(
         allowed_tools=["Read", "Bash(git *)"],
@@ -131,6 +143,21 @@ def test_run_prompt_parses_result(monkeypatch):
     assert res.is_error is False
     assert res.cost_usd == 0.5
     assert res.duration_ms == 123
+
+
+def test_run_prompt_extracts_structured_output(monkeypatch):
+    payload = (b'{"result":"prose here","session_id":"sid","is_error":false,'
+               b'"structured_output":{"categorie":"technique","urgent":true}}')
+    _patch_exec(monkeypatch, _JsonProc(stdout=payload))
+    res = asyncio.run(run_prompt(Config(), _opts()))
+    assert res.structured == {"categorie": "technique", "urgent": True}
+    assert res.text == "prose here"  # prose preserved alongside structured
+
+
+def test_run_prompt_structured_none_without_schema(monkeypatch):
+    payload = b'{"result":"hi","session_id":"sid","is_error":false}'
+    _patch_exec(monkeypatch, _JsonProc(stdout=payload))
+    assert asyncio.run(run_prompt(Config(), _opts())).structured is None
 
 
 def test_run_prompt_malformed_json_falls_back(monkeypatch):
@@ -220,6 +247,21 @@ def test_stream_collects_deltas_and_summary(monkeypatch):
     assert res.session_id == "sid"
     assert res.cost_usd == 0.1
     assert res.is_error is False
+
+
+def test_stream_extracts_structured_output(monkeypatch):
+    lines = [
+        b'{"type":"system","subtype":"init","session_id":"sid"}\n',
+        b'{"type":"result","subtype":"success","is_error":false,"result":"done",'
+        b'"structured_output":{"score":7},"session_id":"sid"}\n',
+    ]
+    _patch_exec(monkeypatch, _StreamProc(lines))
+
+    async def on_delta(t):
+        pass
+
+    res = asyncio.run(run_prompt_stream(Config(), _opts(), on_delta))
+    assert res.structured == {"score": 7}
 
 
 def test_stream_without_result_event_falls_back(monkeypatch):
