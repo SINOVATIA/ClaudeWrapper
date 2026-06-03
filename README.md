@@ -54,6 +54,9 @@ build\dist\claude-wrapper.exe --port 9000 --root C:\projects --token s3cret
   session's sandbox. Optional `json_schema` (a JSON Schema object) forces
   structured output — the parsed object is returned in the `structured` field
   alongside the prose `text`.
+- `claude_session_new` — start a fresh conversation and run its first turn,
+  returning a `session_id` to pass to `claude_prompt` for follow-ups. Convenience
+  over letting the first `claude_prompt` mint the id.
 - `claude_prompt_stream` — same inputs/result as `claude_prompt`, but text
   deltas are streamed to the client as **progress notifications** (delta in the
   `message` field, cumulative char count in `progress`) while Claude generates.

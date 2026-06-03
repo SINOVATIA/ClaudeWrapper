@@ -83,6 +83,24 @@ def _prepare_options(
     return opts, (session_id or new_id or wd)
 
 
+def _ok(result: Any) -> dict[str, Any]:
+    """Standard success payload shared by the prompt tools."""
+    return {
+        "text": result.text,
+        "session_id": result.session_id,
+        "is_error": result.is_error,
+        "cost_usd": result.cost_usd,
+        "duration_ms": result.duration_ms,
+        "structured": result.structured,
+    }
+
+
+def _err(session_id: str | None, exc: WrapperError) -> dict[str, Any]:
+    """Standard error payload (a WrapperError surfaced to the consumer)."""
+    return {"text": "", "session_id": session_id, "is_error": True,
+            "error_code": exc.code, "error": exc.message}
+
+
 def build_server(cfg: Config) -> FastMCP:
     mcp = FastMCP("claude-wrapper", host=cfg.host, port=cfg.port)
     registry = SessionRegistry(cfg.max_concurrency)
@@ -145,17 +163,50 @@ def build_server(cfg: Config) -> FastMCP:
             if result.session_id:
                 await registry.pin(result.session_id, opts.working_dir)
 
-            return {
-                "text": result.text,
-                "session_id": result.session_id,
-                "is_error": result.is_error,
-                "cost_usd": result.cost_usd,
-                "duration_ms": result.duration_ms,
-                "structured": result.structured,
-            }
+            return _ok(result)
         except WrapperError as exc:
-            return {"text": "", "session_id": session_id, "is_error": True,
-                    "error_code": exc.code, "error": exc.message}
+            return _err(session_id, exc)
+
+    @mcp.tool()
+    async def claude_session_new(
+        prompt: str,
+        working_dir: str,
+        model: str | None = None,
+        permission_mode: str | None = None,
+        allowed_tools: list[str] | None = None,
+        disallowed_tools: list[str] | None = None,
+        system_prompt_append: str | None = None,
+        max_budget_usd: float | None = None,
+        json_schema: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        """Start a fresh conversation and run its first turn (spec §5.3).
+
+        Convenience over ``claude_prompt``: it never resumes (no ``session_id``
+        input) and always mints a new session, pinned to ``working_dir``. The
+        returned ``session_id`` is then passed to ``claude_prompt`` /
+        ``claude_prompt_stream`` to continue the conversation.
+        """
+        try:
+            opts, slot_key = _prepare_options(
+                cfg, registry,
+                prompt=prompt, working_dir=working_dir, model=model,
+                permission_mode=permission_mode, allowed_tools=allowed_tools,
+                disallowed_tools=disallowed_tools,
+                system_prompt_append=system_prompt_append,
+                session_id=None, max_budget_usd=max_budget_usd,
+                json_schema=json_schema,
+            )
+
+            slot = await registry.slot(slot_key)
+            async with slot:
+                result = await run_prompt(cfg, opts)
+
+            if result.session_id:
+                await registry.pin(result.session_id, opts.working_dir)
+
+            return _ok(result)
+        except WrapperError as exc:
+            return _err(None, exc)
 
     @mcp.tool()
     async def claude_prompt_stream(
@@ -205,17 +256,9 @@ def build_server(cfg: Config) -> FastMCP:
             if result.session_id:
                 await registry.pin(result.session_id, opts.working_dir)
 
-            return {
-                "text": result.text,
-                "session_id": result.session_id,
-                "is_error": result.is_error,
-                "cost_usd": result.cost_usd,
-                "duration_ms": result.duration_ms,
-                "structured": result.structured,
-            }
+            return _ok(result)
         except WrapperError as exc:
-            return {"text": "", "session_id": session_id, "is_error": True,
-                    "error_code": exc.code, "error": exc.message}
+            return _err(session_id, exc)
 
     return mcp
 

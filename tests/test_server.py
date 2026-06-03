@@ -4,9 +4,10 @@ import asyncio
 
 import pytest
 
+from claude_wrapper.cli import PromptResult
 from claude_wrapper.config import Config
 from claude_wrapper.errors import WrapperError
-from claude_wrapper.server import _prepare_options
+from claude_wrapper.server import _err, _ok, _prepare_options, build_server
 from claude_wrapper.sessions import SessionRegistry
 
 
@@ -77,3 +78,29 @@ def test_json_schema_threaded_into_options(tmp_path):
     opts, _ = _prep(Config(), SessionRegistry(2),
                     working_dir=str(tmp_path), json_schema=schema)
     assert opts.json_schema == schema
+
+
+def test_ok_payload_shape():
+    payload = _ok(PromptResult("hello", "sid", False, 0.25, 99, {"k": "v"}))
+    assert payload == {
+        "text": "hello", "session_id": "sid", "is_error": False,
+        "cost_usd": 0.25, "duration_ms": 99, "structured": {"k": "v"},
+    }
+
+
+def test_err_payload_shape():
+    payload = _err("sid", WrapperError("some_code", "boom"))
+    assert payload["is_error"] is True
+    assert payload["error_code"] == "some_code"
+    assert payload["error"] == "boom"
+    assert payload["session_id"] == "sid"
+    assert payload["text"] == ""
+
+
+def test_server_registers_expected_tools():
+    tools = asyncio.run(build_server(Config()).list_tools())
+    names = {t.name for t in tools}
+    assert names == {
+        "claude_health", "claude_prompt", "claude_session_new",
+        "claude_prompt_stream",
+    }
