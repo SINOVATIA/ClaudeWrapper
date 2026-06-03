@@ -260,6 +260,54 @@ def build_server(cfg: Config) -> FastMCP:
         except WrapperError as exc:
             return _err(session_id, exc)
 
+    @mcp.tool()
+    async def claude_chat(
+        prompt: str,
+        working_dir: str,
+        ctx: Context,
+        model: str | None = None,
+        permission_mode: str | None = None,
+        allowed_tools: list[str] | None = None,
+        disallowed_tools: list[str] | None = None,
+        system_prompt_append: str | None = None,
+        max_budget_usd: float | None = None,
+        json_schema: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        """Send a message in THIS connection's ongoing conversation (spec §6.3).
+
+        The wrapper keeps one Claude session per connected MCP client: the first
+        call on a connection starts a fresh session (pinned to ``working_dir``);
+        every later call on the SAME connection automatically resumes it — the
+        caller never handles a ``session_id``. Two simultaneous clients (e.g.
+        two opencode instances) therefore get two independent, isolated
+        conversations, even in the same ``working_dir``. Ideal for a relay where
+        the consumer is just a mailbox forwarding the user's messages.
+        """
+        connection = ctx.session  # stable per-connection identity (one per client)
+        bound = registry.connection_session(connection)
+        try:
+            opts, slot_key = _prepare_options(
+                cfg, registry,
+                prompt=prompt, working_dir=working_dir, model=model,
+                permission_mode=permission_mode, allowed_tools=allowed_tools,
+                disallowed_tools=disallowed_tools,
+                system_prompt_append=system_prompt_append,
+                session_id=bound, max_budget_usd=max_budget_usd,
+                json_schema=json_schema,
+            )
+
+            slot = await registry.slot(slot_key)
+            async with slot:
+                result = await run_prompt(cfg, opts)
+
+            if result.session_id:
+                await registry.pin(result.session_id, opts.working_dir)
+                registry.bind_connection(connection, result.session_id)
+
+            return _ok(result)
+        except WrapperError as exc:
+            return _err(bound, exc)
+
     return mcp
 
 

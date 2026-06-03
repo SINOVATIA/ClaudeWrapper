@@ -7,7 +7,9 @@ from __future__ import annotations
 
 import asyncio
 import uuid
+import weakref
 from pathlib import Path
+from typing import Any
 
 from .config import Config
 from .errors import WrapperError
@@ -50,6 +52,13 @@ class SessionRegistry:
         self._paths: dict[str, str] = {}            # session_id -> pinned working_dir
         self._locks: dict[str, asyncio.Lock] = {}   # session_id -> serialization lock
         self._guard = asyncio.Lock()                # protects the maps above
+        # MCP client connection -> Claude session_id. Weak-keyed so an entry
+        # drops automatically when the client disconnects (its ServerSession is
+        # garbage-collected). This is how each connection (e.g. one opencode
+        # instance) gets its own continuous Claude conversation (spec §6.3).
+        self._connections: "weakref.WeakKeyDictionary[Any, str]" = (
+            weakref.WeakKeyDictionary()
+        )
 
     async def _lock_for(self, session_id: str) -> asyncio.Lock:
         async with self._guard:
@@ -74,6 +83,14 @@ class SessionRegistry:
 
     def new_session_id(self) -> str:
         return str(uuid.uuid4())
+
+    def connection_session(self, connection: Any) -> str | None:
+        """Return the Claude session_id bound to this client connection, if any."""
+        return self._connections.get(connection)
+
+    def bind_connection(self, connection: Any, session_id: str) -> None:
+        """Bind (once) a Claude session_id to a client connection for reuse."""
+        self._connections.setdefault(connection, session_id)
 
     class _Slot:
         def __init__(self, registry: "SessionRegistry", session_lock: asyncio.Lock) -> None:

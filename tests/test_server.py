@@ -102,5 +102,5 @@ def test_server_registers_expected_tools():
     names = {t.name for t in tools}
     assert names == {
         "claude_health", "claude_prompt", "claude_session_new",
-        "claude_prompt_stream",
+        "claude_prompt_stream", "claude_chat",
     }

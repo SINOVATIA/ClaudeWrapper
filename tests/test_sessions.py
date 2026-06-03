@@ -104,5 +104,39 @@ def test_global_concurrency_cap():
     assert run_async(run()) == 1
 
 
+class _Conn:
+    """Stand-in for an MCP client connection (a ServerSession is weak-refable)."""
+
+
+def test_connection_binding_is_per_connection():
+    reg = SessionRegistry(2)
+    a, b = _Conn(), _Conn()
+    assert reg.connection_session(a) is None
+    reg.bind_connection(a, "sid-a")
+    reg.bind_connection(b, "sid-b")
+    assert reg.connection_session(a) == "sid-a"
+    assert reg.connection_session(b) == "sid-b"
+
+
+def test_connection_binding_is_stable_once_set():
+    reg = SessionRegistry(2)
+    a = _Conn()
+    reg.bind_connection(a, "first")
+    reg.bind_connection(a, "second")  # setdefault: must not overwrite
+    assert reg.connection_session(a) == "first"
+
+
+def test_connection_binding_drops_on_gc():
+    import gc
+
+    reg = SessionRegistry(2)
+    a = _Conn()
+    reg.bind_connection(a, "sid")
+    assert len(dict(reg._connections)) == 1
+    del a
+    gc.collect()
+    assert len(dict(reg._connections)) == 0
+
+
 def run_async(coro):
     return asyncio.run(coro)

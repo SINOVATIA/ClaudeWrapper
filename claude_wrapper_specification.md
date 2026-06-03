@@ -235,6 +235,18 @@ id for subsequent `claude_prompt` calls. (Convenience over letting the first
 Returns `{ cli_version, node_version, authenticated: bool, ready: bool }`.
 Implemented by invoking `claude --version` and a cheap auth check.
 
+### 5.5 `claude_chat` — connection-bound conversation
+Same inputs as `claude_prompt` **minus `session_id`** (the caller never supplies
+one). The wrapper binds **one Claude session per connected MCP client** and
+resumes it automatically on every call from that client: the first call mints a
+new session (pinned to `working_dir`), later calls on the same connection
+`--resume` it. Two simultaneous clients get two independent, isolated
+conversations even in the same `working_dir`. The binding is keyed on the
+client's MCP connection and dropped automatically when it disconnects (§6.3).
+This is the tool a thin **relay/mailbox** consumer should use so it can forward
+user messages verbatim without tracking any session state. Output is identical
+to `claude_prompt` (`text`, `session_id`, `structured`, …).
+
 ---
 
 ## 6. Session & Concurrency Model
