@@ -111,19 +111,31 @@ class _Conn:
 def test_connection_binding_is_per_connection():
     reg = SessionRegistry(2)
     a, b = _Conn(), _Conn()
-    assert reg.connection_session(a) is None
-    reg.bind_connection(a, "sid-a")
-    reg.bind_connection(b, "sid-b")
-    assert reg.connection_session(a) == "sid-a"
-    assert reg.connection_session(b) == "sid-b"
+    assert reg.connection_session(a, "/wd") is None
+    reg.bind_connection(a, "/wd", "sid-a")
+    reg.bind_connection(b, "/wd", "sid-b")
+    assert reg.connection_session(a, "/wd") == "sid-a"
+    assert reg.connection_session(b, "/wd") == "sid-b"
+
+
+def test_connection_binding_is_per_directory():
+    reg = SessionRegistry(2)
+    a = _Conn()
+    reg.bind_connection(a, "/projA", "sid-A")
+    reg.bind_connection(a, "/projB", "sid-B")
+    # Same connection, two dirs -> two distinct conversations.
+    assert reg.connection_session(a, "/projA") == "sid-A"
+    assert reg.connection_session(a, "/projB") == "sid-B"
+    # An unseen dir on a known connection is still fresh.
+    assert reg.connection_session(a, "/projC") is None
 
 
 def test_connection_binding_is_stable_once_set():
     reg = SessionRegistry(2)
     a = _Conn()
-    reg.bind_connection(a, "first")
-    reg.bind_connection(a, "second")  # setdefault: must not overwrite
-    assert reg.connection_session(a) == "first"
+    reg.bind_connection(a, "/wd", "first")
+    reg.bind_connection(a, "/wd", "second")  # setdefault: must not overwrite
+    assert reg.connection_session(a, "/wd") == "first"
 
 
 def test_connection_binding_drops_on_gc():
@@ -131,7 +143,7 @@ def test_connection_binding_drops_on_gc():
 
     reg = SessionRegistry(2)
     a = _Conn()
-    reg.bind_connection(a, "sid")
+    reg.bind_connection(a, "/wd", "sid")
     assert len(dict(reg._connections)) == 1
     del a
     gc.collect()

@@ -237,15 +237,19 @@ Implemented by invoking `claude --version` and a cheap auth check.
 
 ### 5.5 `claude_chat` — connection-bound conversation
 Same inputs as `claude_prompt` **minus `session_id`** (the caller never supplies
-one). The wrapper binds **one Claude session per connected MCP client** and
-resumes it automatically on every call from that client: the first call mints a
-new session (pinned to `working_dir`), later calls on the same connection
-`--resume` it. Two simultaneous clients get two independent, isolated
-conversations even in the same `working_dir`. The binding is keyed on the
-client's MCP connection and dropped automatically when it disconnects (§6.3).
-This is the tool a thin **relay/mailbox** consumer should use so it can forward
-user messages verbatim without tracking any session state. Output is identical
-to `claude_prompt` (`text`, `session_id`, `structured`, …).
+one). The wrapper binds **one Claude session per connected MCP client *and per
+`working_dir`*** and resumes it automatically: the first message for a given
+directory mints a new session (pinned to that dir), later messages on the same
+connection+directory `--resume` it. Changing `working_dir` mid-dialogue switches
+to that directory's own conversation — started fresh the first time, resumed on
+return (chosen behaviour: *per-directory memory*). Two simultaneous clients get
+independent, isolated conversations even in the same `working_dir`. The binding
+is keyed on the client's MCP connection (a `WeakKeyDictionary` on the
+`ServerSession`) and dropped automatically when it disconnects (§6.3). This is
+the tool a thin **relay/mailbox** consumer should use so it can forward user
+messages verbatim without tracking any session state — and it may vary
+`working_dir` freely per message. Output is identical to `claude_prompt`
+(`text`, `session_id`, `structured`, …).
 
 ---
 

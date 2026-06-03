@@ -58,9 +58,11 @@ build\dist\claude-wrapper.exe --port 9000 --root C:\projects --token s3cret
   returning a `session_id` to pass to `claude_prompt` for follow-ups. Convenience
   over letting the first `claude_prompt` mint the id.
 - `claude_chat` — send a message in **this connection's** ongoing conversation.
-  The wrapper keeps one Claude session per connected MCP client and resumes it
-  automatically, so the caller never handles a `session_id`. Two simultaneous
-  clients get two isolated conversations — ideal for a relay/mailbox consumer.
+  The wrapper keeps one Claude session per connected MCP client **and per
+  `working_dir`**, resuming it automatically, so the caller never handles a
+  `session_id`. Changing `working_dir` mid-dialogue switches to that directory's
+  own conversation (fresh the first time, resumed on return). Two simultaneous
+  clients get isolated conversations — ideal for a relay/mailbox consumer.
 - `claude_prompt_stream` — same inputs/result as `claude_prompt`, but text
   deltas are streamed to the client as **progress notifications** (delta in the
   `message` field, cumulative char count in `progress`) while Claude generates.

@@ -52,11 +52,13 @@ class SessionRegistry:
         self._paths: dict[str, str] = {}            # session_id -> pinned working_dir
         self._locks: dict[str, asyncio.Lock] = {}   # session_id -> serialization lock
         self._guard = asyncio.Lock()                # protects the maps above
-        # MCP client connection -> Claude session_id. Weak-keyed so an entry
-        # drops automatically when the client disconnects (its ServerSession is
-        # garbage-collected). This is how each connection (e.g. one opencode
-        # instance) gets its own continuous Claude conversation (spec §6.3).
-        self._connections: "weakref.WeakKeyDictionary[Any, str]" = (
+        # MCP client connection -> {pinned working_dir -> Claude session_id}.
+        # Weak-keyed on the connection so the whole entry drops automatically
+        # when the client disconnects (its ServerSession is garbage-collected).
+        # Keying the inner map by working_dir gives each connection one
+        # continuous conversation *per directory* (spec §6.3): switching dirs
+        # switches conversation, returning to a dir resumes its memory.
+        self._connections: "weakref.WeakKeyDictionary[Any, dict[str, str]]" = (
             weakref.WeakKeyDictionary()
         )
 
@@ -84,13 +86,13 @@ class SessionRegistry:
     def new_session_id(self) -> str:
         return str(uuid.uuid4())
 
-    def connection_session(self, connection: Any) -> str | None:
-        """Return the Claude session_id bound to this client connection, if any."""
-        return self._connections.get(connection)
+    def connection_session(self, connection: Any, working_dir: str) -> str | None:
+        """Return the Claude session_id bound to (connection, working_dir), if any."""
+        return self._connections.get(connection, {}).get(working_dir)
 
-    def bind_connection(self, connection: Any, session_id: str) -> None:
-        """Bind (once) a Claude session_id to a client connection for reuse."""
-        self._connections.setdefault(connection, session_id)
+    def bind_connection(self, connection: Any, working_dir: str, session_id: str) -> None:
+        """Bind (once) a Claude session_id to (connection, working_dir) for reuse."""
+        self._connections.setdefault(connection, {}).setdefault(working_dir, session_id)
 
     class _Slot:
         def __init__(self, registry: "SessionRegistry", session_lock: asyncio.Lock) -> None:

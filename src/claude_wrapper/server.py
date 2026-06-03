@@ -275,17 +275,23 @@ def build_server(cfg: Config) -> FastMCP:
     ) -> dict[str, Any]:
         """Send a message in THIS connection's ongoing conversation (spec §6.3).
 
-        The wrapper keeps one Claude session per connected MCP client: the first
-        call on a connection starts a fresh session (pinned to ``working_dir``);
-        every later call on the SAME connection automatically resumes it — the
-        caller never handles a ``session_id``. Two simultaneous clients (e.g.
-        two opencode instances) therefore get two independent, isolated
-        conversations, even in the same ``working_dir``. Ideal for a relay where
-        the consumer is just a mailbox forwarding the user's messages.
+        The wrapper keeps one Claude session per connected MCP client *and per
+        ``working_dir``*: the first message for a given directory starts a fresh
+        session; later messages on the same connection and directory resume it —
+        the caller never handles a ``session_id``. Changing ``working_dir`` mid
+        dialogue switches to that directory's own conversation (started fresh the
+        first time, resumed on return). Two simultaneous clients (e.g. two
+        opencode instances) get independent, isolated conversations even in the
+        same directory. Ideal for a relay/mailbox consumer.
         """
         connection = ctx.session  # stable per-connection identity (one per client)
-        bound = registry.connection_session(connection)
+        bound: str | None = None
         try:
+            # Resolve+validate the dir first: it is the key for this connection's
+            # per-directory conversation, so it must match the pinned form.
+            wd = validate_working_dir(cfg, working_dir)
+            bound = registry.connection_session(connection, wd)
+
             opts, slot_key = _prepare_options(
                 cfg, registry,
                 prompt=prompt, working_dir=working_dir, model=model,
@@ -302,7 +308,7 @@ def build_server(cfg: Config) -> FastMCP:
 
             if result.session_id:
                 await registry.pin(result.session_id, opts.working_dir)
-                registry.bind_connection(connection, result.session_id)
+                registry.bind_connection(connection, opts.working_dir, result.session_id)
 
             return _ok(result)
         except WrapperError as exc:
