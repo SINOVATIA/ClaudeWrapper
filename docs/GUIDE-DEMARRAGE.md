@@ -13,6 +13,12 @@ l'ordre. Les commandes sont à taper dans **PowerShell** (Windows). Sur macOS /
 Linux, remplace `\` par `/` et `.venv\Scripts\python` par `.venv/bin/python`.
 
 ---
+> 🟢 **Mode Laizy ?** Si tu n'y connais rien :
+> Vas dans le répertoire de ton second cerveau : fait click-droit choisit "Ouvrir dans le terminal".
+> tappe "Claude" + Entrée. Lorsque tu es dans claude copie le prompt suivant :
+> ```Installe cette extension https://github.com/SINOVATIA/ClaudeWrapper/ , installe toute les dépendances, compile le, et crée un raccourci vers l'exécutable généré dans le répertoire courant. Dans le répertoire de opencode ou prisme dans agent l'utilisateur doit placer le prompt au bon endroit pour opencode. Le guider pas à pas avec la documentation. ```
+
+---
 
 ## Sommaire
 
