@@ -5,6 +5,19 @@ shown by `claude-wrapper --version`, in the startup banner, and in the
 `claude_health` tool (`wrapper_version`). This project aims to follow
 [Semantic Versioning](https://semver.org): `MAJOR.MINOR.PATCH`.
 
+## [0.2.1] — 2026-06-11
+
+### Fixed
+- **Windows: `claude` CLI not found when installed via npm.** The wrapper spawned
+  `claude` through `create_subprocess_exec`, which on Windows uses `CreateProcess`
+  and only auto-appends `.exe` (never consulting `PATHEXT`). An npm install
+  (`npm install -g @anthropic-ai/claude-code`) provides only a `claude.cmd` shim,
+  so the spawn failed silently: `claude_health` reported `cli_version: null` /
+  `ready: false` (while `authenticated` stayed true). The CLI is now resolved via
+  `shutil.which` (honours `PATHEXT`, finds `.cmd`/`.exe`) at **all** spawn sites —
+  `claude_prompt`, `claude_prompt_stream`, and the health probe — not just health.
+  No effect on POSIX or on native-installer (`claude.exe`) setups.
+
 ## [0.2.0] — 2026-06-03
 
 ### Added
@@ -37,5 +50,6 @@ shown by `claude-wrapper --version`, in the startup banner, and in the
 - **Packaging**: PyInstaller one-file build (`build/claude-wrapper.spec`).
 - `pytest` test suite.
 
+[0.2.1]: #021--2026-06-11
 [0.2.0]: #020--2026-06-03
 [0.1.0]: #010--2026-06-02

@@ -260,6 +260,7 @@ Si tu laisses `model:` commenté, opencode utilise son modèle par défaut.
 |---|---|---|
 | opencode ne voit pas l'outil `claude_chat` | serveur arrêté, ou mauvaise URL | Vérifie que le terminal du serveur tourne ; l'URL doit finir par `/mcp` |
 | `authenticated: false` dans le health | Claude pas connecté | Relance `claude`, connecte-toi, réessaie |
+| `ready: false` avec `cli_version: null` (mais `authenticated: true`) | wrapper trop ancien qui ne trouve pas `claude.cmd` (install npm sous Windows) | Mets le wrapper à jour (≥ 0.2.1) puis redémarre le serveur. Vérifie que `claude --version` répond dans un terminal neuf |
 | `invalid_working_dir` | dossier inexistant / chemin relatif | Donne un chemin **absolu** qui **existe** (ex. `C:\DATA\PROJET_X`) |
 | `working_dir_forbidden` | dossier hors de `--root` | Choisis un dossier sous la racine, ou démarre le serveur sans `--root` |
 | L'agent ajoute « Claude répond : » ou bavarde | modèle de relais faible | Mets **Nemotron 3 Super** ou **Mistral Small 4** (étape 7) ; vérifie que `claude.md` est bien pris en compte |

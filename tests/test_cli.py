@@ -87,6 +87,34 @@ def test_tools_budget_and_system_prompt():
     assert cmd[cmd.index("--max-budget-usd") + 1] == "1.5"
 
 
+# --- executable resolution (Windows .cmd / PATHEXT) ------------------------
+
+def test_resolve_executable_uses_which(monkeypatch):
+    monkeypatch.setattr(cli_mod.shutil, "which", lambda n: r"C:\npm\claude.cmd")
+    assert cli_mod._resolve_executable("claude") == r"C:\npm\claude.cmd"
+
+
+def test_resolve_executable_falls_back_to_name(monkeypatch):
+    # CLI not on PATH (shutil.which -> None): keep the original name so the
+    # downstream FileNotFoundError -> cli_not_found path still fires.
+    monkeypatch.setattr(cli_mod.shutil, "which", lambda n: None)
+    assert cli_mod._resolve_executable("claude") == "claude"
+
+
+def test_run_prompt_resolves_executable(monkeypatch):
+    """run_prompt must spawn the resolved path, not the bare 'claude' name."""
+    monkeypatch.setattr(cli_mod.shutil, "which", lambda n: r"C:\npm\claude.cmd")
+    seen = {}
+
+    async def fake_exec(*argv, **kw):
+        seen["argv0"] = argv[0]
+        return _JsonProc(stdout=b'{"result":"ok","session_id":"s","is_error":false}')
+
+    monkeypatch.setattr(cli_mod.asyncio, "create_subprocess_exec", fake_exec)
+    asyncio.run(run_prompt(Config(), _opts()))
+    assert seen["argv0"] == r"C:\npm\claude.cmd"
+
+
 # --- check_authenticated ---------------------------------------------------
 
 def test_auth_via_env_key(monkeypatch):

@@ -9,6 +9,7 @@ from __future__ import annotations
 import asyncio
 import json
 import os
+import shutil
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from pathlib import Path
@@ -18,6 +19,20 @@ from .errors import WrapperError
 
 # 2 MiB line buffer: the stream-json ``init`` event can be large.
 _STREAM_LIMIT = 2 * 1024 * 1024
+
+
+def _resolve_executable(name: str) -> str:
+    """Resolve a bare command name to a concrete path on PATH.
+
+    ``asyncio.create_subprocess_exec`` goes through ``CreateProcess`` on Windows,
+    which only auto-appends ``.exe`` — it never consults ``PATHEXT``. An
+    npm-installed ``claude`` is a ``claude.cmd`` shim (no ``.exe``), so the bare
+    name isn't found and the spawn fails. ``shutil.which`` honours ``PATHEXT``
+    and returns the real ``.cmd``/``.exe`` path. On POSIX it's a no-op when the
+    name already resolves on PATH. Falls back to the original name (so an
+    explicit absolute path, or a genuinely-missing CLI, behaves as before).
+    """
+    return shutil.which(name) or name
 
 
 @dataclass
@@ -95,6 +110,7 @@ def build_command(cfg: Config, opts: PromptOptions, *, stream: bool = False) -> 
 async def run_prompt(cfg: Config, opts: PromptOptions) -> PromptResult:
     """Run claude headless in ``opts.working_dir`` and parse its JSON result."""
     cmd = build_command(cfg, opts)
+    cmd[0] = _resolve_executable(cmd[0])
     try:
         proc = await asyncio.create_subprocess_exec(
             *cmd,
@@ -153,6 +169,7 @@ async def run_prompt_stream(
     :func:`run_prompt` from the terminal ``result`` event.
     """
     cmd = build_command(cfg, opts, stream=True)
+    cmd[0] = _resolve_executable(cmd[0])
     try:
         proc = await asyncio.create_subprocess_exec(
             *cmd,
@@ -247,7 +264,7 @@ async def _probe_version(executable: str) -> str | None:
     """Return ``<executable> --version`` trimmed output, or None if unavailable."""
     try:
         proc = await asyncio.create_subprocess_exec(
-            executable, "--version",
+            _resolve_executable(executable), "--version",
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )
